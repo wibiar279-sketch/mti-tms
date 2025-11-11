@@ -1,10 +1,10 @@
-# Tahap 1: Composer (build vendor)
-FROM php:8.2-fpm AS vendor
+FROM php:8.2-fpm
 
-# Install dependency system dan ekstensi PHP
+# Install system dependencies dan ekstensi PHP yang dibutuhkan
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
+    zip \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
@@ -14,36 +14,18 @@ RUN apt-get update && apt-get install -y \
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-WORKDIR /app
+WORKDIR /var/www/html
 
-# Copy file composer
+# Copy file composer terlebih dahulu
 COPY composer.json composer.lock ./
 
 # Jalankan composer install
 RUN composer install --no-dev --no-interaction --no-progress --optimize-autoloader
 
-# Tahap 2: Production image
-FROM php:8.2-fpm
+# Copy seluruh source code Laravel
+COPY . .
 
-# Install ekstensi runtime PHP
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    zip \
-    unzip \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql
-
-# Copy source code
-COPY . /var/www/html
-
-# Copy vendor dari tahap pertama
-COPY --from=vendor /app/vendor /var/www/html/vendor
-
-WORKDIR /var/www/html
-
-# Expose port 8000
+# Expose port default Laravel
 EXPOSE 8000
 
 # Jalankan Laravel
