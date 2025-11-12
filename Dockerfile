@@ -1,4 +1,3 @@
-# Gunakan PHP + Apache (bukan FPM)
 FROM php:8.2-apache
 
 # Install dependency sistem & ekstensi PHP
@@ -18,16 +17,21 @@ COPY . .
 # Install dependency Laravel
 RUN composer install --no-dev --no-interaction --no-progress --optimize-autoloader
 
-# Pastikan folder storage dan bootstrap/cache bisa ditulis
+# Set permission Laravel
 RUN chmod -R 775 storage bootstrap/cache
 
-# Laravel optimization (boleh di-skip kalau build awal gagal)
+# Atur DocumentRoot ke folder public
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
+
+# Izinkan .htaccess Laravel berfungsi
+RUN a2enmod rewrite
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+
+# Optimisasi Laravel (boleh di-skip kalau error APP_KEY)
 RUN php artisan config:cache || true \
     && php artisan route:cache || true \
     && php artisan view:cache || true
 
-# Expose port 80 (default Apache)
 EXPOSE 80
 
-# Apache otomatis serve folder public/
 CMD ["apache2-foreground"]
